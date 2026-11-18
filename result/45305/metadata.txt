@@ -1,0 +1,3 @@
+n=212118
+job=45305
+nodes=atlantica[03-04]
