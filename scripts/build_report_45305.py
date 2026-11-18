@@ -135,23 +135,24 @@ for p in (63, 127, 255, 511, 1023):
         oversub.append((p, idle, f(r,"median_s"), f(r,"min_s"), f(r,"max_s"), f(r,"speedup_bubble",1), f(r,"speedup_tree",3), f(r,"efficiency",4)))
 y = table(y, "Tabela 2 - Versão original acima de 32 threads; espera ativa (0) e cessão (1)", ["P", "yield", "Med.", "Mín.", "Máx.", "S", "S'", "E/32"], oversub, [38, 43, 75, 75, 75, 75, 75, 73], size=7.7, leading=13.1)
 
-txt(M, y, "Interpretação", 8.5, True)
-y -= 12
-bullets = [
-    "Árvore original (mpi_sort.c, linhas 48-65): só as folhas ordenam; os pais aguardam e depois intercalam. Em P=31, 16 folhas executam Bubble Sort e 15 ranks aguardam. De P=15 a 31, o tempo cai 2,30x, mas S' sobe só de 7,04 a 7,87: a maior parte da melhora vem de dividir o trabalho quadrático; HT contribui menos.",
-    "Árvore balanceada (linhas 67-99): cada rank retém a metade esquerda e envia a direita a um ajudante. Em P=31, 30 ranks recebem 6.628/6.629 elementos e um recebe 13.258; este último tem cerca de 4x o custo local quadrático. A mediana de P=31 é 2,48x a de P=32. A carga desigual é uma causa plausível; variação de escalonamento também pode influir.",
-    "O S=132,78 da original em P=31 supera P porque T1/T1'=16,87; o paralelismo isolado é S'=7,87 e E=0,254. Em P=31, a balanceada é 1,61x mais rápida que a original. De P=16 a 32, a balanceada cai de 0,226 a 0,086 s: o HT e mais ranks ajudam, mas E cai de 0,743 a 0,460.",
-    "Acima de 32 ranks, yield=1 reduz o tempo em 1,47x (P=63) a 24,78x (P=1023) ante yield=0: pais em espera ativa competem com folhas pelos 32 contextos. O melhor caso com cessão é P=511 (0,0625 s); P=1023 piora para 0,1184 s, consistente com custos de comunicação e escalonamento crescentes.",
-]
-for b in bullets:
+def bullet(y, body):
     txt(M, y, "•", 8.5)
-    y = para(y, b, size=8.3, leading=11.8, indent=10) - 5
+    return para(y, body, size=8.2, leading=11.5, indent=10) - 4
+
+
+txt(M, y, "Árvores, algoritmo e HT", 8.8, True, ACCENT)
+y -= 13
+y = bullet(y, "Original (mpi_sort.c, linhas 48-65): em P=31, 16 folhas fazem Bubble Sort e 15 ranks aguardam. T1/T1'=16,87 explica S=132,78 acima de P; o ganho paralelo isolado é S'=7,87 (E=0,254). De P=15 a 31, o tempo cai 2,30x, mas S' sobe só de 7,04 a 7,87: o benefício adicional do HT é modesto.")
+y = bullet(y, "Balanceada (linhas 67-99): cada rank ordena a metade esquerda. Em P=31, 30 ranks recebem 6.628/6.629 elementos e um recebe 13.258, cerca de 4x o custo local quadrático. A mediana é 2,48x a de P=32; a carga desigual é uma causa plausível, embora a variação do escalonamento também possa influir.")
+
+txt(M, y, "Ganho com balanceamento", 8.8, True, ACCENT)
+y -= 13
+y = bullet(y, "Sem alterar o código: com P fixo em 63, yield=1 reduz 0,2512 para 0,1706 s (1,47x); em P=511, reduz 0,9763 para 0,0625 s (15,62x). Ceder o núcleo permite que o escalonador priorize as folhas enquanto os pais esperam. O melhor tempo é P=511; P=1023 volta a 0,1184 s por custo crescente de processos e mensagens.")
+y = bullet(y, "Alterando o código: em P=31, a balanceada leva 0,2126 s contra 0,3415 s da original (1,61x). Contudo, T1' cai de 2,6884 para 1,3483 s (1,99x) e S' cai de 7,87 para 6,34: o ganho total inclui mais divisões do Bubble Sort; os dados não demonstram aumento do paralelismo isolado. Em P=32, a balanceada chega a 0,0858 s e S'=14,71.")
 
 txt(M, y, "Medição: MPI_Wtime na raiz cobre distribuição até intercalação; inicialização, verificação e placement ficam fora.", 7.5, True)
 y -= 13
 txt(M, y, "O stderr contém avisos do srun sobre --ntasks-per-node ímpar; o placement registra a distribuição real.", 7.5)
-y -= 12
-txt(M, y, "IA: usada para redigir e conferir este relatório a partir dos logs; métricas vêm de summary.csv e raw.tsv.", 7.5)
 assert y > 31, f"Page 1 overflow: y={y}"
 footer(1)
 c.showPage()
@@ -270,6 +271,13 @@ for mode, ps in [("original_reference", (1,3,7,15,31,63,127,255,511,1023)), ("ba
         seq.append(("Original" if mode.startswith("original") else "Balanceada",p, f(r,"median_s",6),f(r,"min_s",6),f(r,"max_s",6)))
 y = table(y, "Tabela 3 - Mediana, mínimo e máximo das referências T1' (s)", ["Árvore", "P", "Mediana", "Mínimo", "Máximo"], seq, [110,45,124,125,125], size=8.0, leading=15)
 txt(M, y-9, "Fonte: result/45305/raw.tsv e summary.csv; cálculos em scripts/summarize.py.", 7.2)
+y -= 36
+rule(y)
+y -= 23
+txt(M, y, "Uso de inteligência artificial", 10, True, ACCENT)
+y -= 18
+y = para(y, "O Codex foi utilizado para organizar os resultados da execução 45305, conferir as comparações numéricas, redigir a análise e diagramar este relatório em PDF. Os tempos e as verificações apresentados foram extraídos de result/45305/raw.tsv, summary.csv e dos registros do job; a ferramenta não executou as medições no cluster durante a elaboração deste documento.", size=8.6, leading=13)
+assert y > 45, f"Appendix overflow: y={y}"
 footer(page)
 c.showPage()
 c.save()
